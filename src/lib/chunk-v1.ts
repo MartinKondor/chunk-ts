@@ -1,10 +1,14 @@
+/*
+Notes:
+- The minChunkSize should be smaller
+*/
+
 import pdfExtractor, { PageChunkType, PageText } from "./pdf-extractor";
 import OpenAI from "openai";
 
 const OPENAI_MODEL = "gpt-4o";
 const WHITESPACE_RATIO_THRESHOLD = 3;
 const openai = new OpenAI({ apiKey: process.env["OPENAI_API_KEY"] });
-const concurrencyLimit = 5;
 
 const normalizeText = async (content: string): Promise<string> => {
   const nonWhitespaceCharacterCount = content.replace(/\s/g, "").length;
@@ -192,7 +196,7 @@ function concatenateTextChunks(
     .join("\n");
 }
 
-export const chunkV1 = async (file: string) => {
+export const chunkV1 = async (file: string): Promise<string[]> => {
   const pages = await pdfExtractor.extractPDF(file);
   console.log(`├── Extracted ${pages.length} pages`);
 
@@ -213,15 +217,10 @@ export const chunkV1 = async (file: string) => {
     })
   );
 
+  const allChunks: string[] = [];
   for (let i = 0; i < cleanedPages.length; i++) {
     const currentPage = cleanedPages[i];
     if (!currentPage.text) continue;
-
-    const surroundingText = [
-      cleanedPages[i - 1]?.text || "",
-      currentPage.text,
-      cleanedPages[i + 1]?.text || "",
-    ].join(" ");
 
     const tableChunksArray =
       currentPage.chunks
@@ -232,6 +231,7 @@ export const chunkV1 = async (file: string) => {
       ? [...tableChunksArray, ...chunkText(currentPage.text, 1000, 200)]
       : chunkText(currentPage.text, 1000, 200);
 
-    return chunks;
+    allChunks.push(...chunks);
   }
+  return allChunks;
 };
