@@ -7,7 +7,7 @@ export default function Home() {
   const [isUploading, setIsUploading] = useState(false);
   const [chunks, setChunks] = useState<string[]>([]);
   const [chunksV1, setChunksV1] = useState<string[]>([]);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string>("");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -24,7 +24,9 @@ export default function Home() {
   };
 
   const handleUpload = async () => {
-    if (!file) return;
+    if (!file) {
+      return;
+    }
 
     setIsUploading(true);
     setError("");
@@ -110,9 +112,7 @@ export default function Home() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* First chunking method results */}
         <div className="border rounded-lg p-4">
-          <h2 className="text-xl font-semibold mb-4">
-            Default Chunking Method
-          </h2>
+          <h2 className="text-xl font-semibold mb-4">New Chunking Method</h2>
           {chunks.length > 0 ? (
             <div className="space-y-4">
               {chunks.map((chunk, index) => (
@@ -137,7 +137,7 @@ export default function Home() {
         {/* Second chunking method results */}
         <div className="border rounded-lg p-4">
           <h2 className="text-xl font-semibold mb-4">
-            Alternative Chunking Method
+            Current Chunking Method
           </h2>
           {chunksV1.length > 0 ? (
             <div className="space-y-4">
