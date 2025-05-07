@@ -1,6 +1,6 @@
 # Chunk TS
 
-<p align="center"><img width="700px" src="./readme.png"></p>
+<p align="center"><img width="900px" src="./readme.png"></p>
 
 Demonstrate document chunking.
 
