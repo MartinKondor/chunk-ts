@@ -28,6 +28,8 @@ export default function Home() {
       return;
     }
 
+    setChunks([]);
+    setChunksV1([]);
     setIsUploading(true);
     setError("");
 

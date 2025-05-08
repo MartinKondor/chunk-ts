@@ -197,6 +197,8 @@ function concatenateTextChunks(
 }
 
 export const chunkV1 = async (file: string): Promise<string[]> => {
+  return [];
+  /*
   const pages = await pdfExtractor.extractPDF(file);
   console.log(`├── Extracted ${pages.length} pages`);
 
@@ -234,4 +236,5 @@ export const chunkV1 = async (file: string): Promise<string[]> => {
     allChunks.push(...chunks);
   }
   return allChunks;
+  */
 };
