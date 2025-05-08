@@ -15,6 +15,7 @@
     "pdf2json": "^3.1.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "sentence-splitter": "^5.0.0",
     "tiktoken": "^1.0.21"
   },
   "devDependencies": {
