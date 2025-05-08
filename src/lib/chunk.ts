@@ -9,7 +9,8 @@ import { encoding_for_model } from "tiktoken";
 
 const OPENAI_MODEL = "gpt-4o-mini";
 const EMBEDDING_MODEL = "text-embedding-3-large";
-const TOKEN_LIMIT = 7500;
+const TOKEN_LIMIT = 8000;
+const CHUNK_TOKEN_LIMIT = 700;
 const WHITESPACE_RATIO_THRESHOLD = 3;
 const openai = new OpenAI({ apiKey: process.env["OPENAI_API_KEY"] });
 
@@ -62,7 +63,7 @@ export const preprocessText = async (text: string): Promise<string> => {
     return text;
   }
   const cleanedText = await normalizeText(text);
-  return cleanedText.replace(/\n/g, " ").trim();
+  return cleanedText.trim();
 };
 
 /**
@@ -151,7 +152,10 @@ function cosineSimilarity(vec1: number[], vec2: number[]): number {
  * @param text - The text to chunk
  * @returns Array of text chunks
  */
-async function lateChunking(text: string): Promise<string[]> {
+async function lateChunking(
+  text: string,
+  tokenLimit: number
+): Promise<string[]> {
   // First get the embedding for the entire text
   const response = await openai.embeddings.create({
     model: EMBEDDING_MODEL,
@@ -173,7 +177,7 @@ async function lateChunking(text: string): Promise<string[]> {
     const sentenceTokenCount = enc.encode(sentence).length;
 
     // If adding this sentence would exceed token limit, start a new chunk
-    if (currentTokenCount + sentenceTokenCount > TOKEN_LIMIT) {
+    if (currentTokenCount + sentenceTokenCount > tokenLimit) {
       if (currentChunk) {
         chunks.push(currentChunk.trim());
       }
@@ -233,7 +237,9 @@ export const chunk = async (file: string): Promise<string[]> => {
   // There is a token limit for each embedding model so we need to split the text into preChunks
   const preChunks = createChunksBasedOnTokenLimit(fullText, TOKEN_LIMIT);
   console.log(`├── Created ${preChunks.length} pre-chunked segments`);
-  const chunks = await Promise.all(preChunks.map(lateChunking));
+  const chunks = await Promise.all(
+    preChunks.map((chunk) => lateChunking(chunk, CHUNK_TOKEN_LIMIT))
+  );
   console.log(`├── Created ${chunks.length} semantically chunked segments`);
   return chunks.flat();
 };

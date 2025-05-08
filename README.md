@@ -6,6 +6,8 @@ Demonstrate document chunking.
 
 ## Installation
 
+First, create a `.env` file based on `.env.example`. Then run:
+
 ```
 pnpm i
 pnpm dev
