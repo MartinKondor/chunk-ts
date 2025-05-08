@@ -10,7 +10,7 @@ import { encoding_for_model } from "tiktoken";
 const OPENAI_MODEL = "gpt-4o-mini";
 const EMBEDDING_MODEL = "text-embedding-3-large";
 const TOKEN_LIMIT = 8000;
-const CHUNK_TOKEN_LIMIT = 700;
+const CHUNK_TOKEN_LIMIT = 500;
 const WHITESPACE_RATIO_THRESHOLD = 3;
 const openai = new OpenAI({ apiKey: process.env["OPENAI_API_KEY"] });
 
