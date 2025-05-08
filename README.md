@@ -2,7 +2,7 @@
 
 <p align="center"><img width="900px" src="./readme.png"></p>
 
-Demonstrate document chunking.
+Let's you compare semantic and simple character based chunking.
 
 ## Installation
 

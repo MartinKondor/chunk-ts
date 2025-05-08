@@ -4,7 +4,7 @@ import { useState } from "react";
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
   const [chunks, setChunks] = useState<string[]>([]);
   const [chunksV1, setChunksV1] = useState<string[]>([]);
   const [error, setError] = useState<string>("");
@@ -46,7 +46,7 @@ export default function Home() {
       const response = await fetch("/api/chunk-file", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ file: base64File }),
+        body: JSON.stringify({ file: base64File, method: "semantic" }),
       });
 
       if (!response.ok) {
@@ -56,10 +56,10 @@ export default function Home() {
       const data = await response.json();
       setChunks(data.chunks);
 
-      const responseV1 = await fetch("/api/chunk-file-v1", {
+      const responseV1 = await fetch("/api/chunk-file", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ file: base64File }),
+        body: JSON.stringify({ file: base64File, method: "simple" }),
       });
 
       if (!responseV1.ok) {
@@ -197,7 +197,7 @@ export default function Home() {
           {/* First chunking method results */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl border border-gray-200 dark:border-gray-700">
             <h2 className="text-xl font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white">
-              New Chunking Method
+              Semantic Chunking
             </h2>
             {chunks.length > 0 ? (
               <div className="space-y-4 pr-2">
@@ -241,7 +241,7 @@ export default function Home() {
           {/* Second chunking method results */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transition-all duration-300 hover:shadow-xl border border-gray-200 dark:border-gray-700">
             <h2 className="text-xl font-semibold mb-4 pb-2 border-b border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white">
-              Current Chunking Method
+              Simple Chunking
             </h2>
             {chunksV1.length > 0 ? (
               <div className="space-y-4 pr-2">
