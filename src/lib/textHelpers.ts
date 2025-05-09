@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { encoding_for_model } from "tiktoken";
 
-export const OPENAI_MODEL = "gpt-4o-mini";
+export const OPENAI_MODEL = "gpt-4o";
 export const EMBEDDING_MODEL = "text-embedding-3-large";
 export const WHITESPACE_RATIO_THRESHOLD = 3;
 export const openai = new OpenAI({ apiKey: process.env["OPENAI_API_KEY"] });
