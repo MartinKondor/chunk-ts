@@ -15,8 +15,9 @@ import {
 } from "./textHelpers";
 
 const TOKEN_LIMIT = 8000;
-const CHUNK_TOKEN_LIMIT = 400;
-const SENTENCE_SIMILARITY_THRESHOLD = 0.75;
+const CHUNK_TOKEN_LIMIT = 200;
+const SENTENCE_SIMILARITY_THRESHOLD = 0.8;
+const MIN_CLUSTER_SIZE = 3;
 
 /**
  * This function is used to chunk text into semantically meaningful chunks.
@@ -68,6 +69,7 @@ async function semanticChunking(
   const visited = new Set<number>();
   const clusters: number[][] = [];
 
+  // First pass: Create initial clusters by similarity
   for (let i = 0; i < sentences.length; i++) {
     if (visited.has(i)) continue;
 
@@ -87,16 +89,74 @@ async function semanticChunking(
     clusters.push(cluster);
   }
 
+  // Second pass: Merge small clusters with their most similar neighbors
+  let mergedClusters: number[][] = [...clusters];
+  while (true) {
+    const smallClusters = mergedClusters.filter(
+      (cluster) => cluster.length < MIN_CLUSTER_SIZE
+    );
+
+    if (smallClusters.length === 0) break;
+
+    let merged = false;
+    for (const smallCluster of smallClusters) {
+      if (smallCluster.length === 0) continue;
+
+      // Find most similar cluster to merge with
+      let bestClusterIdx = -1;
+      let bestAvgSimilarity = 0;
+
+      for (let i = 0; i < mergedClusters.length; i++) {
+        const candidateCluster = mergedClusters[i];
+        if (candidateCluster === smallCluster || candidateCluster.length === 0)
+          continue;
+
+        // Calculate average similarity between the small cluster and candidate
+        let totalSim = 0,
+          count = 0;
+        for (const srcIdx of smallCluster) {
+          for (const tgtIdx of candidateCluster) {
+            totalSim += similarityMatrix[srcIdx][tgtIdx];
+            count++;
+          }
+        }
+
+        const avgSim = count > 0 ? totalSim / count : 0;
+        if (avgSim > bestAvgSimilarity) {
+          bestAvgSimilarity = avgSim;
+          bestClusterIdx = i;
+        }
+      }
+
+      // Merge if we found a suitable cluster
+      if (
+        bestClusterIdx >= 0 &&
+        bestAvgSimilarity > SENTENCE_SIMILARITY_THRESHOLD * 0.8
+      ) {
+        mergedClusters[bestClusterIdx] = [
+          ...mergedClusters[bestClusterIdx],
+          ...smallCluster,
+        ];
+        mergedClusters = mergedClusters.filter((c) => c !== smallCluster);
+        merged = true;
+        break;
+      }
+    }
+
+    // If we couldn't merge any small clusters, break the loop
+    if (!merged) break;
+  }
+
   // Sort clusters by document order
-  clusters.forEach((cluster) => cluster.sort((a, b) => a - b));
-  clusters.sort((a, b) => a[0] - b[0]);
+  mergedClusters.forEach((cluster) => cluster.sort((a, b) => a - b));
+  mergedClusters.sort((a, b) => a[0] - b[0]);
 
   // Form chunks from clusters while respecting token limits
   const chunks: string[] = [];
   let currentChunk: string[] = [];
   let currentTokenCount = 0;
 
-  for (const cluster of clusters) {
+  for (const cluster of mergedClusters) {
     // Calculate token count for this cluster
     const clusterSentences = cluster.map((idx) => sentences[idx]);
     const clusterText = clusterSentences.join(" ");
