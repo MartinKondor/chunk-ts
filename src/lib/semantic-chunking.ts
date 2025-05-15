@@ -11,13 +11,57 @@ import {
   EMBEDDING_MODEL,
   cosineSimilarity,
   preprocessText,
-  createChunksBasedOnTokenLimit,
 } from "./textHelpers";
 
 const TOKEN_LIMIT = 8000;
 const CHUNK_TOKEN_LIMIT = 200;
-const SENTENCE_SIMILARITY_THRESHOLD = 0.8;
+const SENTENCE_SIMILARITY_THRESHOLD = 0.9;
 const MIN_CLUSTER_SIZE = 3;
+
+const splitIntoBatches = (sentences: string[], tokenLimit: number) => {
+  const batches: string[][] = [];
+  const enc = encoding_for_model(EMBEDDING_MODEL);
+  let currentBatch: string[] = [];
+  let currentTokenCount = 0;
+
+  for (const sentence of sentences) {
+    const sentenceTokens = enc.encode(sentence).length;
+
+    if (
+      currentTokenCount + sentenceTokens > tokenLimit &&
+      currentBatch.length > 0
+    ) {
+      batches.push(currentBatch);
+      currentBatch = [];
+      currentTokenCount = 0;
+    }
+
+    // Handle sentences that are longer than the token limit
+    if (sentenceTokens > tokenLimit) {
+      if (currentBatch.length > 0) {
+        batches.push(currentBatch);
+        currentBatch = [];
+        currentTokenCount = 0;
+      }
+      // Split the sentence into batches of the token limit
+      const batch = splitIntoBatches([sentence], tokenLimit);
+      batches.push(...batch);
+      continue;
+    }
+
+    // Add the sentence to the current batch
+    currentBatch.push(sentence);
+    currentTokenCount += sentenceTokens;
+  }
+
+  // Add the last batch if it's not empty
+  if (currentBatch.length > 0) {
+    batches.push(currentBatch);
+  }
+
+  enc.free();
+  return batches;
+};
 
 /**
  * This function is used to chunk text into semantically meaningful chunks.
@@ -43,15 +87,23 @@ async function semanticChunking(
   const enc = encoding_for_model(EMBEDDING_MODEL);
 
   // Get embeddings for each sentence
-  const embeddingResponse = await openai.embeddings.create({
-    model: EMBEDDING_MODEL,
-    input: sentences,
-    encoding_format: "float",
-  });
+  // Create sentence batches to avoid token limit of the embedding model
+  // Run embedding for each batch then combine the results into a single array
+  const sentenceBatches = splitIntoBatches(sentences, TOKEN_LIMIT);
+  console.log(`├── Created ${sentenceBatches.length} sentence batches`);
+  const sentenceEmbeddings: number[][] = [];
 
-  const sentenceEmbeddings = embeddingResponse.data.map(
-    (item) => item.embedding
-  );
+  for (const batch of sentenceBatches) {
+    const embeddingResponse = await openai.embeddings.create({
+      model: EMBEDDING_MODEL,
+      input: batch,
+      encoding_format: "float",
+    });
+
+    sentenceEmbeddings.push(
+      ...embeddingResponse.data.map((item) => item.embedding)
+    );
+  }
 
   // Calculate similarity matrix between all sentences
   const similarityMatrix: number[][] = [];
@@ -244,13 +296,7 @@ export const chunk = async (file: string): Promise<string[]> => {
   );
 
   const fullText = cleanedPages.map((page) => page).join("\n");
-
-  // There is a token limit for each embedding model so we need to split the text into preChunks
-  const preChunks = createChunksBasedOnTokenLimit(fullText, TOKEN_LIMIT);
-  console.log(`├── Created ${preChunks.length} pre-chunked segments`);
-  const chunks = await Promise.all(
-    preChunks.map((chunk) => semanticChunking(chunk, CHUNK_TOKEN_LIMIT))
-  );
+  const chunks = await semanticChunking(fullText, CHUNK_TOKEN_LIMIT);
   console.log(`├── Created ${chunks.length} semantically chunked segments`);
   return chunks.flat();
 };
